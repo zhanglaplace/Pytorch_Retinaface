@@ -24,6 +24,7 @@ parser.add_argument('--nms_threshold', default=0.4, type=float, help='nms_thresh
 parser.add_argument('--keep_top_k', default=750, type=int, help='keep_top_k')
 parser.add_argument('-s', '--save_image', action="store_true", default=True, help='show detection results')
 parser.add_argument('--vis_thres', default=0.6, type=float, help='visualization_threshold')
+parser.add_argument('--save_model', action="store_true", default=False, help='save full model')
 args = parser.parse_args()
 
 
@@ -79,11 +80,13 @@ if __name__ == '__main__':
     cudnn.benchmark = True
     device = torch.device("cpu" if args.cpu else "cuda")
     net = net.to(device)
+    if args.save_model:
+        torch.save(net, "retinaface.pth")
 
     resize = 1
 
     # testing begin
-    for i in range(100):
+    for i in range(3):
         image_path = "./curve/test.jpg"
         img_raw = cv2.imread(image_path, cv2.IMREAD_COLOR)
 
