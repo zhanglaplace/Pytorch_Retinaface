@@ -13,7 +13,7 @@ def main():
     net.eval()
     print('model: ', net)
     #print('state dict: ', net.state_dict().keys())
-    tmp = torch.ones(1, 3, 360, 640).to(device)
+    tmp = torch.ones(1, 3, 384, 640).to(device)
     print('input: ', tmp)
     out = net(tmp)
     print('output:', out)
