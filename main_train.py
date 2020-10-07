@@ -47,13 +47,13 @@ def train(opt, train_dict, device, tb_writer=None):
     train_path = train_dict['train']
     test_path = train_dict['val']
     train_dict['weights'] = last if not train_dict['pretrain'] or (
-            train_dict['pretrain'] and not os.path.exists(train_dict['weight'])) else train_dict['weight']
+            train_dict['pretrain'] and not os.path.exists(train_dict['weights'])) else train_dict['weights']
     model = RetinaFace(train_dict, phase='Train')
     pretrained = False
     if os.path.exists(train_dict['weights']):
         pretrained = True
         logger('Loading resume network from ====>{}'.format(train_dict['weights']))
-        state_dict = torch.load(train_dict['weight'], map_location=device)
+        state_dict = torch.load(train_dict['weights'], map_location=device)
         # create new OrderedDict that does not contain `module.`
         from collections import OrderedDict
         new_state_dict = OrderedDict()
@@ -86,7 +86,7 @@ def train(opt, train_dict, device, tb_writer=None):
     logger.info('Optimizer groups: %g .bias, %g conv.weight, %g other' % (len(pg2), len(pg1), len(pg0)))
     del pg0, pg1, pg2
 
-    epoch = train_dict['epoch']
+    epochs = train_dict['epoch']
     lf = lambda x: (((1 + math.cos(x * math.pi / epochs)) / 2) ** 1.0) * 0.8 + 0.2  # cosine
     scheduler = lr_scheduler.LambdaLR(optimizer, lr_lambda=lf)
     plot_lr_scheduler(optimizer, scheduler, epochs)

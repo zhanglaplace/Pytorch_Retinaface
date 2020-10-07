@@ -1,0 +1,40 @@
+train: coco/images/train2017
+val: coco/images/val2017
+name: Resnet50
+min_sizes:
+- - 16
+  - 32
+- - 64
+  - 128
+- - 256
+  - 512
+steps:
+- 8
+- 16
+- 32
+variance:
+- 0.1
+- 0.2
+clip: true
+loc_weight: 2.0
+gpu_train: true
+batch_size: 3
+ngpu: 8
+epoch: 300
+decay1: 70
+decay2: 90
+image_size: 640
+pretrain: true
+weights: ./weights/Resnet50_Final.pth
+device: ''
+logdir: ckpt/resnet50/
+return_layers:
+  layer2: 1
+  layer3: 2
+  layer4: 3
+in_channel: 256
+out_channel: 256
+adam: false
+momentum: 0.937
+weight_decay: 0.0005
+lr0: 0.01

@@ -1,0 +1,4 @@
+cfg: exp/retinaface_resnet50.yaml
+local_rank: 0
+world_size: 8
+global_rank: 0
