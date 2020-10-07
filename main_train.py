@@ -9,7 +9,9 @@
 @desc: 修改为基于amp的distribute的训练
 """
 import yaml
+import logging
 import argparse
+from pathlib import Path
 import torch.distributed as dist
 from torch.nn.parallel import DistributedDataParallel as DDP
 import torch.nn.functional as F
@@ -18,7 +20,6 @@ import torch.optim.lr_scheduler as lr_scheduler
 import torch.utils.data
 from torch.utils.tensorboard import SummaryWriter
 
-import test  # import test.py to get mAP after each epoch
 from models.retinaface import RetinaFace
 from utils.datasets import *
 from utils.utils import *
@@ -31,7 +32,6 @@ best = wdir + 'best.pt'
 results_file = 'results.txt'
 
 logger = logging.getLogger(__name__)
-
 
 def train(opt, train_dict, device, tb_writer=None):
     pass
@@ -62,13 +62,13 @@ if __name__ == '__main__':
         train_dict['batch_size'] = train_dict['batch_size'] // opt.world_size
 
     logger.info(opt)
-    logger.info(data_dict)
+    logger.info(train_dict)
 
     tb_writer = None
     if opt.global_rank in [-1, 0]:
         logger.info(
             'Start Tensorboard with "tensorboard --logdir %s", view at http://localhost:6006/' % train_dict['logdir'])
         tb_writer = SummaryWriter(
-            log_dir=increment_dir(Path(train_dict['logdir']) / 'exp', train_dict['name']))  # runs/exp
+            log_dir=Path(train_dict['logdir']) / 'exp')  # runs/exp
 
     train(opt, train_dict, device, tb_writer)
