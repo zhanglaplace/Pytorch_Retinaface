@@ -8,7 +8,7 @@ clip: True
 loc_weight: 2.0
 gpu_train: True
 batch_size: 24
-ngpu: 4
+ngpu: 8
 epoch: 100
 decay1: 70
 decay2: 90
@@ -20,3 +20,8 @@ logdir: 'ckpt/resnet50/'
 return_layers: {layer2: 1, layer3: 2, layer4: 3}
 in_channel: 256
 out_channel: 256
+adam: False
+momentum: 0.937
+weight_decay: 0.0005
+lr0: 0.01
+

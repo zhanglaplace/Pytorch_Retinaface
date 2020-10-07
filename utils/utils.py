@@ -53,3 +53,19 @@ def select_device(device='', batch_size=None):
 
     logger.info('')  # skip a line
     return torch.device('cuda:0' if cuda else 'cpu')
+
+def plot_lr_scheduler(optimizer, scheduler, epochs=300, save_dir=''):
+    # Plot LR simulating training for full epochs
+    optimizer, scheduler = copy(optimizer), copy(scheduler)  # do not modify originals
+    y = []
+    for _ in range(epochs):
+        scheduler.step()
+        y.append(optimizer.param_groups[0]['lr'])
+    plt.plot(y, '.-', label='LR')
+    plt.xlabel('epoch')
+    plt.ylabel('LR')
+    plt.grid()
+    plt.xlim(0, epochs)
+    plt.ylim(0)
+    plt.tight_layout()
+    plt.savefig(Path(save_dir) / 'LR.png', dpi=200)
