@@ -24,4 +24,5 @@ adam: False
 momentum: 0.937
 weight_decay: 0.0005
 lr0: 0.01
+sync_bn: False
 

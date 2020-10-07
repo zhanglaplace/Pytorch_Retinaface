@@ -24,6 +24,9 @@ from models.retinaface import RetinaFace
 from utils.datasets import *
 from utils.utils import *
 from torch.cuda import amp
+from data import preproc
+from layers.modules import MultiBoxLoss
+from layers.functions.prior_box import PriorBox
 
 logger = logging.getLogger(__name__)
 
@@ -113,6 +116,65 @@ def train(opt, train_dict, device, tb_writer=None):
 
         del ckpt, state_dict
 
+    if train_dict['sync_bn'] and cuda and rank != -1:
+        model = torch.nn.SyncBatchNorm.convert_sync_batchnorm(model).to(device)
+        logger.info('Using SyncBatchNorm()')
+
+    # Exponential moving average
+    ema = ModelEMA(model) if rank in [-1, 0] else None
+
+    # ddp
+    if cuda and rank != -1:
+        model = DDP(model, device_ids=[opt.local_rank], output_device=(opt.local_rank))
+
+    # Trainloader
+    batch_size = train_dict['batch_size']
+    image_size = train_dict['image_size']
+    # dataloader, dataset = create_dataloader(train_path,image_size, batch_size, opt, hyp=train_dict, augment=True,
+    #                                         rect=opt.rect, rank=rank,
+    #                                         world_size=opt.world_size, workers=train_dict['workers'])
+    rgb_mean = (104, 117, 123)  # bgr order
+    dataset = WiderFaceDetection(train_path, preproc(image_size, rgb_mean))
+    sampler = torch.utils.data.distributed.DistributedSampler(dataset)
+    dataloader = torch.utils.data.DataLoader(dataset,
+                                             batch_size=batch_size,
+                                             num_workers=8,
+                                             sampler=sampler,
+                                             pin_memory=True,
+                                             collate_fn=detection_collate)
+
+    criterion = MultiBoxLoss(num_classes, 0.35, True, 0, True, 7, 0.35, False)
+    priorbox = PriorBox(train_dict, image_size=(image_size, image_size))
+    with torch.no_grad():
+        priors = priorbox.forward()
+        priors = priors.cuda()
+    for epoch in range(start_epoch, epochs):
+        if rank != -1:
+            dataloader.sampler.set_epoch(epoch)
+        pbar = enumerate(dataloader)
+        if rank in [-1, 0]:
+            pbar = tqdm(pbar)  # progress bar
+        optimizer.zero_grad()
+        for i, (images, targets) in pbar:  # batch -------------------------------------------------------------
+            with amp.autocast(enabled=cuda):
+                images = images.cuda()
+                targets = [anno.cuda() for anno in targets]
+                out = model(images)
+                optimizer.zero_grad()
+                loss_l, loss_c, loss_landm = criterion(out, priors, targets) * opt.world_size
+                loss = cfg['loc_weight'] * loss_l + loss_c + loss_landm
+                loss.backward()
+                optimizer.step()
+                load_t1 = time.time()
+                batch_time = load_t1 - load_t0
+                eta = int(batch_time * (max_iter - iteration))
+                if rank in [-1, 0]:
+                    print(
+                        'Epoch:{}/{} || Epochiter: {}/{} || Iter: {}/{} || Loc: {:.4f} Cla: {:.4f} Landm: {:.4f} || LR: {:.8f} || Batchtime: {:.4f} s || ETA: {}'
+                        .format(epoch, max_epoch, (iteration % epoch_size) + 1,
+                                epoch_size, iteration + 1, max_iter, loss_l.item(), loss_c.item(), loss_landm.item(), lr,
+                                batch_time, str(datetime.timedelta(seconds=eta))))
+                    torch.save(net.state_dict(), wdir + os.sep + '{}_Final.pth'.format(i))
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser("--retinaface for face detect")
